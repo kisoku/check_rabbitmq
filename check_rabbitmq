@@ -29,15 +29,19 @@ class RabbitCmdWrapper(object):
        if desired."""
 
     @classmethod
-    def list_connections(cls):
+    def list_connections(cls, vhost=None):
         args = shlex.split("sudo rabbitmqctl list_connections")
+        if vhost:
+            args.extend(["-p", vhost])
         cmd_result = subprocess.check_output(args).strip()
         results = cls._parse_list_results(cmd_result)
         return results
 
     @classmethod
-    def list_queues(cls):
+    def list_queues(cls, vhost=None):
         args = shlex.split('sudo rabbitmqctl list_queues')
+        if vhost:
+            args.extend(["-p", vhost])
         cmd_result = subprocess.check_output(args).strip()
         results = cls._parse_list_results(cmd_result)
         return results
@@ -56,7 +60,7 @@ class RabbitCmdWrapper(object):
 
 
 
-def check_connection_count(critical=0, warning=0):
+def check_connection_count(critical=0, warning=0, vhost=None):
     """Checks to make sure the numbers of connections are within parameters."""
     try:
         count = len(RabbitCmdWrapper.list_connections())
@@ -71,7 +75,7 @@ def check_connection_count(critical=0, warning=0):
     except Exception, err:
         print "CRITICAL - %s" % err
 
-def check_queues_count(critical=1000, warning=1000):
+def check_queues_count(critical=1000, warning=1000, vhost=None):
     """
     A blanket check to make sure all queues are within count parameters.
     TODO: Possibly break this out so test can be done on individual queues.
@@ -91,7 +95,7 @@ def check_queues_count(critical=1000, warning=1000):
 
 
 
-USAGE = """Usage: ./check_rabbitmq -a [action] -c [critical] -w [warning]
+USAGE = """Usage: ./check_rabbitmq -a [action] -c [critical] -w [warning] -p [vhost]
            Actions:
            - connection_count
              checks the number of connection in rabbitmq's list_connections
@@ -106,12 +110,14 @@ if __name__ == "__main__":
             help="Critical Threshold")
     parser.add_option("-W", "--warning", dest="warning",
             help="Warning Threshold")
+    parser.add_option("-p", "--vhostpath", dest="vhost",
+            help="Virtual Host Path")
     (options, args) = parser.parse_args()
 
     if options.action == "connection_count":
-        check_connection_count(options.critical, options.warning)
+        check_connection_count(options.critical, options.warning, options.vhost)
     elif options.action == "queues_count":
-        check_queues_count(options.critical, options.warning)
+        check_queues_count(options.critical, options.warning, options.vhost)
     else:
         print "Invalid action: %s" % options.action
         print USAGE
